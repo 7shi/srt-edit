@@ -7,14 +7,18 @@ export function VideoPlayer() {
   const [currentTime, setCurrentTime] = useState(0);
   const [duration, setDuration] = useState(0);
   const [isPlaying, setIsPlaying] = useState(false);
+  const [undoOpen, setUndoOpen] = useState(false);
   const subtitles = useSubtitleStore((s) => s.subtitles);
   const setActive = useSubtitleStore((s) => s.setActive);
   const selectAndSeek = useSubtitleStore((s) => s.selectAndSeek);
   const splitAtTime = useSubtitleStore((s) => s.splitAtTime);
   const undo = useSubtitleStore((s) => s.undo);
   const canUndo = useSubtitleStore((s) => s.canUndo);
+  const undoHistory = useSubtitleStore((s) => s.undoHistory);
+  const undoTo = useSubtitleStore((s) => s.undoTo);
   const seekTarget = useSubtitleStore((s) => s.seekTarget);
   const consumeSeekTarget = useSubtitleStore((s) => s.consumeSeekTarget);
+  const undoRef = useRef<HTMLDivElement>(null);
 
   const handleFileChange = useCallback(
     (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -96,6 +100,22 @@ export function VideoPlayer() {
   const stepBackward = () => seek(currentTime - 0.1);
   const stepForward = () => seek(currentTime + 0.1);
 
+  useEffect(() => {
+    if (!undoOpen) return;
+    const handler = (e: MouseEvent) => {
+      if (undoRef.current && !undoRef.current.contains(e.target as Node)) {
+        setUndoOpen(false);
+      }
+    };
+    document.addEventListener('mousedown', handler);
+    return () => document.removeEventListener('mousedown', handler);
+  }, [undoOpen]);
+
+  const handleUndoTo = (index: number) => {
+    undoTo(index);
+    setUndoOpen(false);
+  };
+
   return (
     <div className="flex flex-col gap-2">
       <div className="relative bg-black rounded-lg overflow-hidden aspect-video">
@@ -166,13 +186,35 @@ export function VideoPlayer() {
               >
                 Split
               </button>
-              <button
-                onClick={undo}
-                disabled={!canUndo}
-                className="px-3 py-1 rounded bg-gray-200 hover:bg-gray-300 disabled:opacity-40 disabled:cursor-not-allowed"
-              >
-                Undo
-              </button>
+              <div ref={undoRef} className="relative flex">
+                <button
+                  onClick={undo}
+                  disabled={!canUndo}
+                  className="px-3 py-1 rounded-l bg-gray-200 hover:bg-gray-300 disabled:opacity-40 disabled:cursor-not-allowed"
+                >
+                  Undo
+                </button>
+                <button
+                  onClick={() => setUndoOpen((o) => !o)}
+                  disabled={!canUndo}
+                  className="px-1 py-1 rounded-r border-l border-gray-300 bg-gray-200 hover:bg-gray-300 disabled:opacity-40 disabled:cursor-not-allowed"
+                >
+                  <svg className="w-3 h-3" viewBox="0 0 10 6" fill="currentColor"><path d="M0 0l5 6L10 0z" /></svg>
+                </button>
+                {undoOpen && undoHistory.length > 0 && (
+                  <div className="absolute top-full left-0 mt-1 bg-white border border-gray-200 rounded shadow-lg z-50 min-w-[320px] max-h-[200px] overflow-y-auto">
+                    {[...undoHistory].reverse().map((entry) => (
+                      <button
+                        key={entry.index}
+                        onClick={() => handleUndoTo(entry.index)}
+                        className="block w-full text-left px-3 py-1.5 text-sm hover:bg-gray-100"
+                      >
+                        {entry.label}
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </div>
               <button
                 onClick={stepForward}
                 className="px-2 py-1 rounded hover:bg-gray-100"
