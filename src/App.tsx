@@ -1,7 +1,6 @@
 import { VideoPlayer } from './components/VideoPlayer';
 import { FileControls } from './components/FileControls';
 import { SubtitleList } from './components/SubtitleList';
-import { Timeline } from './components/Timeline';
 
 function App() {
   return (
@@ -12,7 +11,6 @@ function App() {
       <main className="max-w-5xl mx-auto flex flex-col gap-4">
         <FileControls />
         <VideoPlayer />
-        <Timeline />
         <SubtitleList />
       </main>
     </div>
