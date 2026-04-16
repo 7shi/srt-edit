@@ -12,7 +12,7 @@ export function VideoPlayer() {
   const activeId = useSubtitleStore((s) => s.activeId);
   const setActive = useSubtitleStore((s) => s.setActive);
   const selectAndSeek = useSubtitleStore((s) => s.selectAndSeek);
-  const splitAtTime = useSubtitleStore((s) => s.splitAtTime);
+  const adjustAtTime = useSubtitleStore((s) => s.adjustAtTime);
   const undo = useSubtitleStore((s) => s.undo);
   const canUndo = useSubtitleStore((s) => s.canUndo);
   const undoHistory = useSubtitleStore((s) => s.undoHistory);
@@ -211,13 +211,13 @@ export function VideoPlayer() {
               </label>
               <button
                 onClick={() => {
-                  if (activeId) splitAtTime(currentTime, pinMode ? activeId : undefined);
+                  if (activeId) adjustAtTime(currentTime, pinMode ? activeId : undefined);
                   if (pinMode) setActive(null);
                 }}
                 disabled={!isPlaying || !activeId}
                 className="px-3 py-1 rounded bg-orange-500 text-white hover:bg-orange-600 disabled:opacity-40 disabled:cursor-not-allowed"
               >
-                Split
+                Adjust
               </button>
               <div ref={undoRef} className="relative flex">
                 <button

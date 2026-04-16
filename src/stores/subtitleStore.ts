@@ -73,7 +73,7 @@ interface SubtitleState {
   selectAndSeek: (id: string) => void;
   mergeWithNext: (id: string) => void;
   reorderSubtitles: () => void;
-  splitAtTime: (currentTime: number, subId?: string) => void;
+  adjustAtTime: (currentTime: number, subId?: string) => void;
   undo: () => void;
   undoTo: (index: number) => void;
   seekTarget: number | null;
@@ -213,7 +213,7 @@ export const useSubtitleStore = create<SubtitleState>((set, get) => ({
     });
   },
 
-  splitAtTime: (currentTime: number, subId?: string) => {
+  adjustAtTime: (currentTime: number, subId?: string) => {
     const { subtitles } = get();
     const sorted = [...subtitles].sort((a, b) => a.startTime - b.startTime);
     const currentIdx = subId
@@ -223,8 +223,8 @@ export const useSubtitleStore = create<SubtitleState>((set, get) => ({
         );
     const sub = currentIdx !== -1 ? sorted[currentIdx] : null;
     const label = sub
-      ? `Split: ${fmtTime(currentTime)} ${shortText(sub.text)}`
-      : 'Split';
+      ? `Adjust: ${fmtTime(currentTime)} ${shortText(sub.text)}`
+      : 'Adjust';
     pushUndo(subtitles, label);
     if (currentIdx === -1) return;
 

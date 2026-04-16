@@ -68,6 +68,7 @@ export function SubtitleItem({
       <textarea
         value={subtitle.text}
         onChange={(e) => updateSubtitle(id, { text: e.target.value })}
+        onFocus={() => setActive(id)}
         rows={1}
         className="flex-1 px-2 py-0.5 text-sm border rounded resize-none min-w-0"
       />
