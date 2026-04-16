@@ -57,11 +57,13 @@ interface SubtitleState {
   setActive: (id: string | null) => void;
   selectAndSeek: (id: string) => void;
   reorderSubtitles: () => void;
-  splitAtTime: (currentTime: number) => void;
+  splitAtTime: (currentTime: number, subId?: string) => void;
   undo: () => void;
   undoTo: (index: number) => void;
   seekTarget: number | null;
   consumeSeekTarget: () => number | null;
+  pinMode: boolean;
+  setPinMode: (mode: boolean) => void;
 }
 
 export const useSubtitleStore = create<SubtitleState>((set, get) => ({
@@ -73,7 +75,7 @@ export const useSubtitleStore = create<SubtitleState>((set, get) => ({
   loadSrt: (content: string) => {
     const subtitles = parseSrt(content);
     undoStack = [];
-    set({ subtitles, activeId: null, canUndo: false, undoHistory: [] });
+    set({ subtitles, activeId: null, canUndo: false, undoHistory: [], pinMode: false });
   },
 
   exportSrt: () => {
@@ -163,12 +165,14 @@ export const useSubtitleStore = create<SubtitleState>((set, get) => ({
     });
   },
 
-  splitAtTime: (currentTime: number) => {
+  splitAtTime: (currentTime: number, subId?: string) => {
     const { subtitles } = get();
     const sorted = [...subtitles].sort((a, b) => a.startTime - b.startTime);
-    const currentIdx = sorted.findIndex(
-      (s) => currentTime >= s.startTime && currentTime <= s.endTime,
-    );
+    const currentIdx = subId
+      ? sorted.findIndex((s) => s.id === subId)
+      : sorted.findIndex(
+          (s) => currentTime >= s.startTime && currentTime <= s.endTime,
+        );
     const sub = currentIdx !== -1 ? sorted[currentIdx] : null;
     const label = sub
       ? `Split: ${fmtTime(currentTime)} ${shortText(sub.text)}`
@@ -210,6 +214,8 @@ export const useSubtitleStore = create<SubtitleState>((set, get) => ({
   },
 
   seekTarget: null,
+  pinMode: false,
+  setPinMode: (mode) => set(mode ? { pinMode: true } : { pinMode: false }),
 
   consumeSeekTarget: () => {
     const { seekTarget } = get();

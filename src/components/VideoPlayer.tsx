@@ -9,6 +9,7 @@ export function VideoPlayer() {
   const [isPlaying, setIsPlaying] = useState(false);
   const [undoOpen, setUndoOpen] = useState(false);
   const subtitles = useSubtitleStore((s) => s.subtitles);
+  const activeId = useSubtitleStore((s) => s.activeId);
   const setActive = useSubtitleStore((s) => s.setActive);
   const selectAndSeek = useSubtitleStore((s) => s.selectAndSeek);
   const splitAtTime = useSubtitleStore((s) => s.splitAtTime);
@@ -18,6 +19,8 @@ export function VideoPlayer() {
   const undoTo = useSubtitleStore((s) => s.undoTo);
   const seekTarget = useSubtitleStore((s) => s.seekTarget);
   const consumeSeekTarget = useSubtitleStore((s) => s.consumeSeekTarget);
+  const pinMode = useSubtitleStore((s) => s.pinMode);
+  const setPinMode = useSubtitleStore((s) => s.setPinMode);
   const undoRef = useRef<HTMLDivElement>(null);
 
   const handleFileChange = useCallback(
@@ -36,7 +39,13 @@ export function VideoPlayer() {
     if (!video) return;
 
     const onTimeUpdate = () => {
-      setCurrentTime(video.currentTime);
+      const time = video.currentTime;
+      setCurrentTime(time);
+      const { pinMode, activeId, subtitles, setActive } = useSubtitleStore.getState();
+      if (!pinMode || !activeId) {
+        const detected = subtitles.find(s => time >= s.startTime && time < s.endTime);
+        if (detected) setActive(detected.id);
+      }
     };
     const onLoadedMetadata = () => setDuration(video.duration);
     const onPlay = () => setIsPlaying(true);
@@ -62,26 +71,31 @@ export function VideoPlayer() {
     else video.pause();
   };
 
-  const seek = (time: number) => {
+  const seek = useCallback((time: number) => {
     const video = videoRef.current;
     if (!video) return;
     video.currentTime = Math.max(0, Math.min(time, duration));
-  };
+  }, [duration]);
 
   const activeSub = subtitles.find(
     (s) => currentTime >= s.startTime && currentTime < s.endTime,
   );
+  const activeSubId = activeSub?.id ?? null;
+
+  const displaySub = activeId
+    ? subtitles.find((s) => s.id === activeId) ?? null
+    : null;
 
   useEffect(() => {
-    if (activeSub) setActive(activeSub.id);
-  }, [activeSub?.id]);
+    if (!pinMode && activeSubId) setActive(activeSubId);
+  }, [activeSubId, setActive, pinMode]);
 
   useEffect(() => {
     if (seekTarget !== null) {
       const time = consumeSeekTarget();
       if (time !== null) seek(time);
     }
-  }, [seekTarget]);
+  }, [seekTarget, consumeSeekTarget, seek]);
 
   const formatTime = (t: number) => {
     const m = Math.floor(t / 60);
@@ -94,11 +108,12 @@ export function VideoPlayer() {
   const handleProgressClick = (e: React.MouseEvent<HTMLDivElement>) => {
     const rect = e.currentTarget.getBoundingClientRect();
     const ratio = (e.clientX - rect.left) / rect.width;
+    setActive(null);
     seek(ratio * duration);
   };
 
-  const stepBackward = () => seek(currentTime - 0.1);
-  const stepForward = () => seek(currentTime + 0.1);
+  const stepBackward = () => { setActive(null); seek(currentTime - 0.1); };
+  const stepForward = () => { setActive(null); seek(currentTime + 0.1); };
 
   useEffect(() => {
     if (!undoOpen) return;
@@ -140,15 +155,15 @@ export function VideoPlayer() {
           </div>
         )}
 
-        {videoSrc && activeSub && (
+        {videoSrc && displaySub && (
           <div
             className="absolute bottom-8 left-1/2 -translate-x-1/2 bg-black/80 text-white px-4 py-2 rounded text-center max-w-[80%] whitespace-pre-line cursor-pointer"
             onClick={(e) => {
               e.stopPropagation();
-              if (activeSub) selectAndSeek(activeSub.id);
+              if (displaySub) selectAndSeek(displaySub.id);
             }}
           >
-            {activeSub.text}
+            {displaySub.text}
           </div>
         )}
       </div>
@@ -180,8 +195,20 @@ export function VideoPlayer() {
                 {isPlaying ? 'Pause' : 'Play'}
               </button>
               <button
-                onClick={() => splitAtTime(currentTime)}
-                disabled={!isPlaying || !activeSub}
+                onClick={() => setPinMode(!pinMode)}
+                className={`flex items-center gap-1 px-2 py-1 rounded text-sm ${pinMode ? 'bg-purple-500 text-white' : 'bg-gray-200 text-gray-600 hover:bg-gray-300'}`}
+                title="Pin mode"
+              >
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" fill="currentColor" className="w-3.5 h-3.5">
+                  <path d="M11.477 1.268a.75.75 0 0 1 .29.834L10.58 5.785l2.807 2.155a.75.75 0 0 1-.277 1.31l-3.462.708L8.21 13.67a.75.75 0 0 1-1.42 0L5.353 9.958l-3.462-.708a.75.75 0 0 1-.277-1.31L4.42 5.785 3.233 2.102a.75.75 0 0 1 1.074-.854L8 3.735l3.693-2.487a.75.75 0 0 1-.216.02Z" />
+                </svg>
+              </button>
+              <button
+                onClick={() => {
+                  if (activeId) splitAtTime(currentTime, pinMode ? activeId : undefined);
+                  if (pinMode) setActive(null);
+                }}
+                disabled={!isPlaying || !activeId}
                 className="px-3 py-1 rounded bg-orange-500 text-white hover:bg-orange-600 disabled:opacity-40 disabled:cursor-not-allowed"
               >
                 Split
