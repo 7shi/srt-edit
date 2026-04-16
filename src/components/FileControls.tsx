@@ -67,7 +67,7 @@ export function FileControls() {
     } catch {
       // user cancelled
     }
-  }, [fileName, exportSrt, setFileHandle]);
+  }, [fileName, exportSrt, setFileHandle, clearDirty]);
 
   const handleExportSrt = () => {
     const content = exportSrt();

@@ -67,7 +67,7 @@ export function VideoPlayer() {
       video.removeEventListener('play', onPlay);
       video.removeEventListener('pause', onPause);
     };
-  }, [videoSrc]);
+  }, [videoSrc, setVideoDuration]);
 
   const togglePlay = () => {
     const video = videoRef.current;

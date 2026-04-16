@@ -71,6 +71,7 @@ interface SubtitleState {
   updateSubtitle: (id: string, updates: Partial<Pick<Subtitle, 'startTime' | 'endTime' | 'text'>>) => void;
   setActive: (id: string | null) => void;
   selectAndSeek: (id: string) => void;
+  mergeWithNext: (id: string) => void;
   reorderSubtitles: () => void;
   splitAtTime: (currentTime: number, subId?: string) => void;
   undo: () => void;
@@ -178,6 +179,27 @@ export const useSubtitleStore = create<SubtitleState>((set, get) => ({
   selectAndSeek: (id) => {
     const sub = get().subtitles.find((s) => s.id === id);
     if (sub) set({ activeId: id, seekTarget: sub.startTime });
+  },
+
+  mergeWithNext: (id: string) => {
+    const { subtitles } = get();
+    const sorted = [...subtitles].sort((a, b) => a.startTime - b.startTime);
+    const idx = sorted.findIndex((s) => s.id === id);
+    if (idx === -1 || idx === sorted.length - 1) return;
+    const current = sorted[idx];
+    const next = sorted[idx + 1];
+    const label = `Merge: ${fmtTime(current.startTime)} ${shortText(current.text)} + ${fmtTime(next.startTime)} ${shortText(next.text)}`;
+    pushUndo(subtitles, label);
+    const merged: Subtitle = {
+      ...current,
+      endTime: next.endTime,
+      text: current.text + ' ' + next.text,
+    };
+    const newSubs = sorted
+      .filter((s) => s.id !== next.id)
+      .map((s) => (s.id === id ? merged : s))
+      .map((s, i) => ({ ...s, index: i + 1 }));
+    set({ subtitles: newSubs, activeId: id, isDirty: true });
   },
 
   reorderSubtitles: () => {
