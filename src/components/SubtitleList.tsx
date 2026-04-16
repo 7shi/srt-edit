@@ -1,3 +1,4 @@
+import { useEffect, useRef } from 'react';
 import { useSubtitleStore } from '../stores/subtitleStore';
 import { SubtitleItem } from './SubtitleItem';
 
@@ -5,6 +6,13 @@ export function SubtitleList() {
   const subtitles = useSubtitleStore((s) => s.subtitles);
   const addSubtitle = useSubtitleStore((s) => s.addSubtitle);
   const activeId = useSubtitleStore((s) => s.activeId);
+  const scrollRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!activeId || !scrollRef.current) return;
+    const el = scrollRef.current.querySelector(`[data-subtitle-id="${activeId}"]`) as HTMLElement | null;
+    el?.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+  }, [activeId]);
 
   return (
     <div className="flex flex-col gap-2">
@@ -17,7 +25,7 @@ export function SubtitleList() {
           + Add
         </button>
       </div>
-      <div className="flex flex-col gap-1 max-h-[400px] overflow-y-auto">
+      <div ref={scrollRef} className="flex flex-col gap-1 max-h-[400px] overflow-y-auto">
         {subtitles.map((sub) => (
           <SubtitleItem key={sub.id} id={sub.id} />
         ))}

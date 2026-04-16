@@ -31,6 +31,7 @@ export function SubtitleItem({
 
   return (
     <div
+      data-subtitle-id={id}
       className={`flex items-start gap-2 px-3 py-2 rounded border ${
         isActive
           ? 'border-blue-400 bg-blue-50'
