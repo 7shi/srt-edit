@@ -72,7 +72,6 @@ interface SubtitleState {
   setActive: (id: string | null) => void;
   selectAndSeek: (id: string) => void;
   mergeWithNext: (id: string) => void;
-  reorderSubtitles: () => void;
   adjustAtTime: (currentTime: number, subId?: string) => void;
   undo: () => void;
   undoTo: (index: number) => void;
@@ -96,14 +95,16 @@ export const useSubtitleStore = create<SubtitleState>((set, get) => ({
   isDirty: false,
 
   loadSrt: (content: string) => {
-    const parsed = parseSrt(content);
-    const { subs, changed } = clampToDuration(parsed, get().videoDuration);
+    const sorted = fixOverlaps(parseSrt(content))
+      .sort((a, b) => a.startTime - b.startTime)
+      .map((s, i) => ({ ...s, index: i + 1 }));
+    const { subs, changed } = clampToDuration(sorted, get().videoDuration);
     undoStack = [];
     set({ subtitles: subs, activeId: null, canUndo: false, undoHistory: [], pinMode: false, isDirty: changed });
   },
 
   exportSrt: () => {
-    return serializeSrt(get().subtitles);
+    return serializeSrt(fixOverlaps(get().subtitles));
   },
 
   addSubtitle: (afterId?: string) => {
@@ -170,7 +171,7 @@ export const useSubtitleStore = create<SubtitleState>((set, get) => ({
     const updated = get().subtitles.map((s) =>
       s.id === id ? { ...s, ...updates } : s
     );
-    const { subs } = clampToDuration(fixOverlaps(updated), get().videoDuration);
+    const { subs } = clampToDuration(updated, get().videoDuration);
     set({ subtitles: subs, isDirty: true });
   },
 
@@ -202,39 +203,28 @@ export const useSubtitleStore = create<SubtitleState>((set, get) => ({
     set({ subtitles: newSubs, activeId: id, isDirty: true });
   },
 
-  reorderSubtitles: () => {
-    pushUndo(get().subtitles, 'Reorder');
-    set({
-      subtitles: get()
-        .subtitles
-        .sort((a, b) => a.startTime - b.startTime)
-        .map((s, i) => ({ ...s, index: i + 1 })),
-      isDirty: true,
-    });
-  },
-
   adjustAtTime: (currentTime: number, subId?: string) => {
     const { subtitles } = get();
-    const sorted = [...subtitles].sort((a, b) => a.startTime - b.startTime);
     const currentIdx = subId
-      ? sorted.findIndex((s) => s.id === subId)
-      : sorted.findIndex(
+      ? subtitles.findIndex((s) => s.id === subId)
+      : subtitles.findIndex(
           (s) => currentTime >= s.startTime && currentTime <= s.endTime,
         );
-    const sub = currentIdx !== -1 ? sorted[currentIdx] : null;
+    const sub = currentIdx !== -1 ? subtitles[currentIdx] : null;
     const label = sub
       ? `Adjust: ${fmtTime(currentTime)} ${shortText(sub.text)}`
       : 'Adjust';
     pushUndo(subtitles, label);
     if (currentIdx === -1) return;
 
-    const updated = sorted.map((s, i) => {
+    const updated = subtitles.map((s, i) => {
       if (i === currentIdx) return { ...s, endTime: currentTime };
       if (i === currentIdx + 1) return { ...s, startTime: currentTime };
       return s;
-    }).map((s, i) => ({ ...s, index: i + 1 }));
+    });
 
-    set({ subtitles: fixOverlaps(updated).map((s, i) => ({ ...s, index: i + 1 })), isDirty: true });
+    const nextSub = currentIdx + 1 < updated.length ? updated[currentIdx + 1] : null;
+    set({ subtitles: updated, activeId: nextSub?.id ?? null, isDirty: true });
   },
 
   undo: () => {

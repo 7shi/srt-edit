@@ -42,8 +42,8 @@ export function VideoPlayer() {
     const onTimeUpdate = () => {
       const time = video.currentTime;
       setCurrentTime(time);
-      const { pinMode, activeId, subtitles, setActive } = useSubtitleStore.getState();
-      if (!pinMode || !activeId) {
+      const { pinMode, subtitles, setActive } = useSubtitleStore.getState();
+      if (!pinMode) {
         const detected = subtitles.find(s => time >= s.startTime && time < s.endTime);
         if (detected) setActive(detected.id);
       }
@@ -211,8 +211,7 @@ export function VideoPlayer() {
               </label>
               <button
                 onClick={() => {
-                  if (activeId) adjustAtTime(currentTime, pinMode ? activeId : undefined);
-                  if (pinMode) setActive(null);
+                  if (activeId) adjustAtTime(currentTime, activeId);
                 }}
                 disabled={!isPlaying || !activeId}
                 className="px-3 py-1 rounded bg-orange-500 text-white hover:bg-orange-600 disabled:opacity-40 disabled:cursor-not-allowed"
