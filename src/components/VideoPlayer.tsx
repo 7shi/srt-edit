@@ -11,6 +11,8 @@ export function VideoPlayer() {
   const setActive = useSubtitleStore((s) => s.setActive);
   const selectAndSeek = useSubtitleStore((s) => s.selectAndSeek);
   const splitAtTime = useSubtitleStore((s) => s.splitAtTime);
+  const undo = useSubtitleStore((s) => s.undo);
+  const canUndo = useSubtitleStore((s) => s.canUndo);
   const seekTarget = useSubtitleStore((s) => s.seekTarget);
   const consumeSeekTarget = useSubtitleStore((s) => s.consumeSeekTarget);
 
@@ -163,6 +165,13 @@ export function VideoPlayer() {
                 className="px-3 py-1 rounded bg-orange-500 text-white hover:bg-orange-600 disabled:opacity-40 disabled:cursor-not-allowed"
               >
                 Split
+              </button>
+              <button
+                onClick={undo}
+                disabled={!canUndo}
+                className="px-3 py-1 rounded bg-gray-200 hover:bg-gray-300 disabled:opacity-40 disabled:cursor-not-allowed"
+              >
+                Undo
               </button>
               <button
                 onClick={stepForward}

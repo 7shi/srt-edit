@@ -12,9 +12,19 @@ function fixOverlaps(subtitles: Subtitle[]): Subtitle[] {
   return sorted;
 }
 
+const MAX_UNDO = 50;
+
+let undoStack: Subtitle[][] = [];
+
+function pushUndo(subtitles: Subtitle[]): void {
+  undoStack = [...undoStack.slice(-(MAX_UNDO - 1)), subtitles.map((s) => ({ ...s }))];
+  useSubtitleStore.setState({ canUndo: true });
+}
+
 interface SubtitleState {
   subtitles: Subtitle[];
   activeId: string | null;
+  canUndo: boolean;
   loadSrt: (content: string) => void;
   exportSrt: () => string;
   addSubtitle: (afterId?: string) => void;
@@ -24,6 +34,7 @@ interface SubtitleState {
   selectAndSeek: (id: string) => void;
   reorderSubtitles: () => void;
   splitAtTime: (currentTime: number) => void;
+  undo: () => void;
   seekTarget: number | null;
   consumeSeekTarget: () => number | null;
 }
@@ -31,10 +42,12 @@ interface SubtitleState {
 export const useSubtitleStore = create<SubtitleState>((set, get) => ({
   subtitles: [],
   activeId: null,
+  canUndo: false,
 
   loadSrt: (content: string) => {
     const subtitles = parseSrt(content);
-    set({ subtitles, activeId: null });
+    undoStack = [];
+    set({ subtitles, activeId: null, canUndo: false });
   },
 
   exportSrt: () => {
@@ -42,6 +55,7 @@ export const useSubtitleStore = create<SubtitleState>((set, get) => ({
   },
 
   addSubtitle: (afterId?: string) => {
+    pushUndo(get().subtitles);
     const { subtitles } = get();
     const sorted = [...subtitles].sort((a, b) => a.startTime - b.startTime);
 
@@ -79,6 +93,7 @@ export const useSubtitleStore = create<SubtitleState>((set, get) => ({
   },
 
   removeSubtitle: (id: string) => {
+    pushUndo(get().subtitles);
     const { subtitles, activeId } = get();
     const newSubs = subtitles
       .filter((s) => s.id !== id)
@@ -104,6 +119,7 @@ export const useSubtitleStore = create<SubtitleState>((set, get) => ({
   },
 
   reorderSubtitles: () => {
+    pushUndo(get().subtitles);
     set({
       subtitles: get()
         .subtitles
@@ -113,6 +129,7 @@ export const useSubtitleStore = create<SubtitleState>((set, get) => ({
   },
 
   splitAtTime: (currentTime: number) => {
+    pushUndo(get().subtitles);
     const { subtitles } = get();
     const sorted = [...subtitles].sort((a, b) => a.startTime - b.startTime);
     const currentIdx = sorted.findIndex(
@@ -127,6 +144,17 @@ export const useSubtitleStore = create<SubtitleState>((set, get) => ({
     }).map((s, i) => ({ ...s, index: i + 1 }));
 
     set({ subtitles: fixOverlaps(updated).map((s, i) => ({ ...s, index: i + 1 })) });
+  },
+
+  undo: () => {
+    if (undoStack.length === 0) return;
+    const prev = undoStack[undoStack.length - 1];
+    undoStack = undoStack.slice(0, -1);
+    set({
+      subtitles: prev,
+      canUndo: undoStack.length > 0,
+      activeId: null,
+    });
   },
 
   seekTarget: null,
