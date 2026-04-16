@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.1.3
+
+Defer overlap fix and sort to load/save only. Fix Adjust button in pin mode to advance to next subtitle by index. Remove Timeline component. Disable subtitle detection during pin mode.
+
 ## 0.1.2
 
 Add GitHub Pages deployment. Add repository link to header. Remove dist from Git tracking.
