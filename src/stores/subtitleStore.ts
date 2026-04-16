@@ -49,6 +49,9 @@ interface SubtitleState {
   activeId: string | null;
   canUndo: boolean;
   undoHistory: { label: string; index: number }[];
+  fileHandle: FileSystemFileHandle | null;
+  fileName: string | null;
+  isDirty: boolean;
   loadSrt: (content: string) => void;
   exportSrt: () => string;
   addSubtitle: (afterId?: string) => void;
@@ -64,6 +67,8 @@ interface SubtitleState {
   consumeSeekTarget: () => number | null;
   pinMode: boolean;
   setPinMode: (mode: boolean) => void;
+  setFileHandle: (handle: FileSystemFileHandle | null, name: string | null) => void;
+  clearDirty: () => void;
 }
 
 export const useSubtitleStore = create<SubtitleState>((set, get) => ({
@@ -71,11 +76,14 @@ export const useSubtitleStore = create<SubtitleState>((set, get) => ({
   activeId: null,
   canUndo: false,
   undoHistory: [],
+  fileHandle: null,
+  fileName: null,
+  isDirty: false,
 
   loadSrt: (content: string) => {
     const subtitles = parseSrt(content);
     undoStack = [];
-    set({ subtitles, activeId: null, canUndo: false, undoHistory: [], pinMode: false });
+    set({ subtitles, activeId: null, canUndo: false, undoHistory: [], pinMode: false, isDirty: false });
   },
 
   exportSrt: () => {
@@ -96,7 +104,7 @@ export const useSubtitleStore = create<SubtitleState>((set, get) => ({
       const afterIdx = sorted.findIndex((s) => s.id === afterId);
       if (afterIdx === -1) {
         const newSub = createSubtitle(sorted.length + 1, 0, 2);
-        set({ subtitles: [...sorted, newSub], activeId: newSub.id });
+        set({ subtitles: [...sorted, newSub], activeId: newSub.id, isDirty: true });
         return;
       }
       const afterSub = sorted[afterIdx];
@@ -117,12 +125,12 @@ export const useSubtitleStore = create<SubtitleState>((set, get) => ({
 
       newSubs.splice(afterIdx + 1, 0, newSub);
       const reindexed = newSubs.map((s, i) => ({ ...s, index: i + 1 }));
-      set({ subtitles: reindexed, activeId: newSub.id });
+      set({ subtitles: reindexed, activeId: newSub.id, isDirty: true });
       return;
     }
 
     const newSub = createSubtitle(sorted.length + 1, 0, 2);
-    set({ subtitles: [...sorted, newSub], activeId: newSub.id });
+    set({ subtitles: [...sorted, newSub], activeId: newSub.id, isDirty: true });
   },
 
   removeSubtitle: (id: string) => {
@@ -138,6 +146,7 @@ export const useSubtitleStore = create<SubtitleState>((set, get) => ({
     set({
       subtitles: newSubs,
       activeId: activeId === id ? null : activeId,
+      isDirty: true,
     });
   },
 
@@ -145,7 +154,7 @@ export const useSubtitleStore = create<SubtitleState>((set, get) => ({
     const updated = get().subtitles.map((s) =>
       s.id === id ? { ...s, ...updates } : s
     );
-    set({ subtitles: fixOverlaps(updated) });
+    set({ subtitles: fixOverlaps(updated), isDirty: true });
   },
 
   setActive: (id) => set({ activeId: id }),
@@ -162,6 +171,7 @@ export const useSubtitleStore = create<SubtitleState>((set, get) => ({
         .subtitles
         .sort((a, b) => a.startTime - b.startTime)
         .map((s, i) => ({ ...s, index: i + 1 })),
+      isDirty: true,
     });
   },
 
@@ -186,7 +196,7 @@ export const useSubtitleStore = create<SubtitleState>((set, get) => ({
       return s;
     }).map((s, i) => ({ ...s, index: i + 1 }));
 
-    set({ subtitles: fixOverlaps(updated).map((s, i) => ({ ...s, index: i + 1 })) });
+    set({ subtitles: fixOverlaps(updated).map((s, i) => ({ ...s, index: i + 1 })), isDirty: true });
   },
 
   undo: () => {
@@ -198,6 +208,7 @@ export const useSubtitleStore = create<SubtitleState>((set, get) => ({
       canUndo: undoStack.length > 0,
       undoHistory: undoStack.map((e, i) => ({ label: e.label, index: i })),
       activeId: null,
+      isDirty: true,
     });
   },
 
@@ -210,6 +221,7 @@ export const useSubtitleStore = create<SubtitleState>((set, get) => ({
       canUndo: undoStack.length > 0,
       undoHistory: undoStack.map((e, i) => ({ label: e.label, index: i })),
       activeId: null,
+      isDirty: true,
     });
   },
 
@@ -222,4 +234,7 @@ export const useSubtitleStore = create<SubtitleState>((set, get) => ({
     set({ seekTarget: null });
     return seekTarget;
   },
+
+  setFileHandle: (handle, name) => set({ fileHandle: handle, fileName: name, isDirty: false }),
+  clearDirty: () => set({ isDirty: false }),
 }));
