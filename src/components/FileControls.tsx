@@ -1,23 +1,11 @@
-import { useRef, useEffect } from 'react';
+import { useRef } from 'react';
 import { useSubtitleStore } from '../stores/subtitleStore';
 
 export function FileControls() {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const loadSrt = useSubtitleStore((s) => s.loadSrt);
   const exportSrt = useSubtitleStore((s) => s.exportSrt);
-  const undo = useSubtitleStore((s) => s.undo);
   const subtitles = useSubtitleStore((s) => s.subtitles);
-
-  useEffect(() => {
-    const handler = (e: KeyboardEvent) => {
-      if ((e.ctrlKey || e.metaKey) && e.key === 'z') {
-        e.preventDefault();
-        undo();
-      }
-    };
-    window.addEventListener('keydown', handler);
-    return () => window.removeEventListener('keydown', handler);
-  }, [undo]);
 
   const handleLoadSrt = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];

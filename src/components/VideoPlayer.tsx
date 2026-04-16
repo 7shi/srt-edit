@@ -194,15 +194,16 @@ export function VideoPlayer() {
               >
                 {isPlaying ? 'Pause' : 'Play'}
               </button>
-              <button
-                onClick={() => setPinMode(!pinMode)}
-                className={`flex items-center gap-1 px-2 py-1 rounded text-sm ${pinMode ? 'bg-purple-500 text-white' : 'bg-gray-200 text-gray-600 hover:bg-gray-300'}`}
-                title="Pin mode"
-              >
-                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" fill="currentColor" className="w-3.5 h-3.5">
-                  <path d="M11.477 1.268a.75.75 0 0 1 .29.834L10.58 5.785l2.807 2.155a.75.75 0 0 1-.277 1.31l-3.462.708L8.21 13.67a.75.75 0 0 1-1.42 0L5.353 9.958l-3.462-.708a.75.75 0 0 1-.277-1.31L4.42 5.785 3.233 2.102a.75.75 0 0 1 1.074-.854L8 3.735l3.693-2.487a.75.75 0 0 1-.216.02Z" />
-                </svg>
-              </button>
+              <label className="flex items-center gap-1 text-sm text-gray-600">
+                Pin
+                <button
+                  onClick={() => setPinMode(!pinMode)}
+                  className={`flex items-center w-10 h-5 rounded-full p-0.5 transition-colors ${pinMode ? 'bg-purple-500' : 'bg-gray-300'}`}
+                  title="Pin mode"
+                >
+                  <span className={`block w-4 h-4 rounded-full bg-white shadow transition-transform ${pinMode ? 'translate-x-5' : 'translate-x-0'}`} />
+                </button>
+              </label>
               <button
                 onClick={() => {
                   if (activeId) splitAtTime(currentTime, pinMode ? activeId : undefined);
