@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.1.2
+
+Add GitHub Pages deployment. Add repository link to header. Remove dist from Git tracking.
+
 ## 0.1.1
 
 Track dist directory in git for deployment.

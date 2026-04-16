@@ -46,3 +46,4 @@ src/
 1. Update version in `package.json` and add entry to `CHANGELOG.md`
 2. Commit all changes
 3. `npm run deploy`
+4. Tag the commit: `git tag v<version> && git push origin main --tags`
