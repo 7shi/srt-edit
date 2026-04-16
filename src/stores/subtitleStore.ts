@@ -2,6 +2,16 @@ import { create } from 'zustand';
 import type { Subtitle } from '../types/subtitle';
 import { parseSrt, serializeSrt, createSubtitle } from '../utils/srtParser';
 
+function fixOverlaps(subtitles: Subtitle[]): Subtitle[] {
+  const sorted = [...subtitles].sort((a, b) => a.startTime - b.startTime);
+  for (let i = 0; i < sorted.length - 1; i++) {
+    if (sorted[i].endTime > sorted[i + 1].startTime) {
+      sorted[i] = { ...sorted[i], endTime: sorted[i + 1].startTime };
+    }
+  }
+  return sorted;
+}
+
 interface SubtitleState {
   subtitles: Subtitle[];
   activeId: string | null;
@@ -33,26 +43,39 @@ export const useSubtitleStore = create<SubtitleState>((set, get) => ({
 
   addSubtitle: (afterId?: string) => {
     const { subtitles } = get();
-    let startTime = 0;
-    let index = subtitles.length + 1;
+    const sorted = [...subtitles].sort((a, b) => a.startTime - b.startTime);
 
     if (afterId) {
-      const afterSub = subtitles.find((s) => s.id === afterId);
-      if (afterSub) {
-        startTime = afterSub.endTime;
-        const afterIdx = subtitles.indexOf(afterSub);
-        index = afterSub.index + 1;
-        const newSub = createSubtitle(index, startTime, startTime + 2);
-        const newSubs = [...subtitles];
-        newSubs.splice(afterIdx + 1, 0, newSub);
-        newSubs.forEach((s, i) => { s.index = i + 1; });
-        set({ subtitles: newSubs, activeId: newSub.id });
+      const afterIdx = sorted.findIndex((s) => s.id === afterId);
+      if (afterIdx === -1) {
+        const newSub = createSubtitle(sorted.length + 1, 0, 2);
+        set({ subtitles: [...sorted, newSub], activeId: newSub.id });
         return;
       }
+      const afterSub = sorted[afterIdx];
+      const nextSub = sorted[afterIdx + 1];
+      const gap = nextSub ? nextSub.startTime - afterSub.endTime : Infinity;
+
+      let newSub: Subtitle;
+      const newSubs = [...sorted];
+
+      if (gap > 0.1) {
+        newSub = createSubtitle(0, afterSub.endTime, nextSub ? nextSub.startTime : afterSub.endTime + 2);
+      } else {
+        const duration = afterSub.endTime - afterSub.startTime;
+        const midPoint = afterSub.startTime + duration / 2;
+        newSubs[afterIdx] = { ...afterSub, endTime: midPoint };
+        newSub = createSubtitle(0, midPoint, afterSub.endTime);
+      }
+
+      newSubs.splice(afterIdx + 1, 0, newSub);
+      const reindexed = newSubs.map((s, i) => ({ ...s, index: i + 1 }));
+      set({ subtitles: reindexed, activeId: newSub.id });
+      return;
     }
 
-    const newSub = createSubtitle(index, startTime, startTime + 2);
-    set({ subtitles: [...subtitles, newSub], activeId: newSub.id });
+    const newSub = createSubtitle(sorted.length + 1, 0, 2);
+    set({ subtitles: [...sorted, newSub], activeId: newSub.id });
   },
 
   removeSubtitle: (id: string) => {
@@ -67,11 +90,10 @@ export const useSubtitleStore = create<SubtitleState>((set, get) => ({
   },
 
   updateSubtitle: (id, updates) => {
-    set({
-      subtitles: get().subtitles.map((s) =>
-        s.id === id ? { ...s, ...updates } : s
-      ),
-    });
+    const updated = get().subtitles.map((s) =>
+      s.id === id ? { ...s, ...updates } : s
+    );
+    set({ subtitles: fixOverlaps(updated) });
   },
 
   setActive: (id) => set({ activeId: id }),
@@ -104,7 +126,7 @@ export const useSubtitleStore = create<SubtitleState>((set, get) => ({
       return s;
     }).map((s, i) => ({ ...s, index: i + 1 }));
 
-    set({ subtitles: updated });
+    set({ subtitles: fixOverlaps(updated).map((s, i) => ({ ...s, index: i + 1 })) });
   },
 
   seekTarget: null,
