@@ -2,6 +2,8 @@
 
 A browser-based subtitle editing tool for adjusting SRT subtitle timing while previewing video.
 
+**[Demo](https://7shi.github.io/srt-edit/)**
+
 ## Features
 
 - Load and play local video files directly in the browser
@@ -51,3 +53,4 @@ Open the URL shown in your terminal (typically http://localhost:5173).
 | `npm run build` | Type-check and build for production |
 | `npm run preview` | Preview production build |
 | `npx vitest run` | Run tests |
+| `npm run deploy` | Build and deploy to GitHub Pages |

@@ -1,17 +1,6 @@
 # AGENTS.md
 
-## Project Overview
-
-Browser-based SRT subtitle editor. Load a video and SRT file, adjust subtitle timing visually, and export. No server required — everything runs client-side.
-
-## Commands
-
-| Command | Purpose |
-|---------|---------|
-| `npm run dev` | Start dev server (Vite) |
-| `npm run build` | Type-check (`tsc -b`) then build |
-| `npm run lint` | ESLint |
-| `npx vitest run` | Run tests |
+See README.md for project overview, features, tech stack, and scripts.
 
 ## Source Structure
 
@@ -50,5 +39,10 @@ src/
 
 - All UI text in English
 - No comments in source code unless explicitly requested
-- Tailwind CSS for styling (no CSS modules or separate stylesheets)
 - Test files colocated with source (e.g., `srtParser.test.ts` next to `srtParser.ts`)
+
+## Version Upgrade
+
+1. Update version in `package.json` and add entry to `CHANGELOG.md`
+2. Commit all changes
+3. `npm run deploy`
