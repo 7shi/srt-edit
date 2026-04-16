@@ -22,6 +22,7 @@ export function VideoPlayer() {
   const pinMode = useSubtitleStore((s) => s.pinMode);
   const setPinMode = useSubtitleStore((s) => s.setPinMode);
   const undoRef = useRef<HTMLDivElement>(null);
+  const setVideoDuration = useSubtitleStore((s) => s.setVideoDuration);
 
   const handleFileChange = useCallback(
     (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -47,7 +48,11 @@ export function VideoPlayer() {
         if (detected) setActive(detected.id);
       }
     };
-    const onLoadedMetadata = () => setDuration(video.duration);
+    const onLoadedMetadata = () => {
+      const d = video.duration;
+      setDuration(d);
+      setVideoDuration(d);
+    };
     const onPlay = () => setIsPlaying(true);
     const onPause = () => setIsPlaying(false);
 

@@ -63,6 +63,7 @@ export function FileControls() {
       await writable.write(exportSrt());
       await writable.close();
       setFileHandle(handle, handle.name);
+      clearDirty();
     } catch {
       // user cancelled
     }

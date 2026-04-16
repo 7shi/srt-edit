@@ -12,6 +12,18 @@ function fixOverlaps(subtitles: Subtitle[]): Subtitle[] {
   return sorted;
 }
 
+function clampToDuration(subtitles: Subtitle[], maxDuration: number | null): { subs: Subtitle[]; changed: boolean } {
+  if (maxDuration === null || maxDuration <= 0) return { subs: subtitles, changed: false };
+  let changed = false;
+  const subs = subtitles.map(s => {
+    const st = Math.min(s.startTime, maxDuration);
+    const et = Math.min(s.endTime, maxDuration);
+    if (st !== s.startTime || et !== s.endTime) changed = true;
+    return { ...s, startTime: st, endTime: et };
+  });
+  return { subs, changed };
+}
+
 const MAX_UNDO = 50;
 
 function fmtTime(t: number): string {
@@ -69,6 +81,8 @@ interface SubtitleState {
   setPinMode: (mode: boolean) => void;
   setFileHandle: (handle: FileSystemFileHandle | null, name: string | null) => void;
   clearDirty: () => void;
+  videoDuration: number | null;
+  setVideoDuration: (d: number | null) => void;
 }
 
 export const useSubtitleStore = create<SubtitleState>((set, get) => ({
@@ -81,9 +95,10 @@ export const useSubtitleStore = create<SubtitleState>((set, get) => ({
   isDirty: false,
 
   loadSrt: (content: string) => {
-    const subtitles = parseSrt(content);
+    const parsed = parseSrt(content);
+    const { subs, changed } = clampToDuration(parsed, get().videoDuration);
     undoStack = [];
-    set({ subtitles, activeId: null, canUndo: false, undoHistory: [], pinMode: false, isDirty: false });
+    set({ subtitles: subs, activeId: null, canUndo: false, undoHistory: [], pinMode: false, isDirty: changed });
   },
 
   exportSrt: () => {
@@ -154,7 +169,8 @@ export const useSubtitleStore = create<SubtitleState>((set, get) => ({
     const updated = get().subtitles.map((s) =>
       s.id === id ? { ...s, ...updates } : s
     );
-    set({ subtitles: fixOverlaps(updated), isDirty: true });
+    const { subs } = clampToDuration(fixOverlaps(updated), get().videoDuration);
+    set({ subtitles: subs, isDirty: true });
   },
 
   setActive: (id) => set({ activeId: id }),
@@ -235,6 +251,15 @@ export const useSubtitleStore = create<SubtitleState>((set, get) => ({
     return seekTarget;
   },
 
-  setFileHandle: (handle, name) => set({ fileHandle: handle, fileName: name, isDirty: false }),
+  setFileHandle: (handle, name) => set({ fileHandle: handle, fileName: name }),
   clearDirty: () => set({ isDirty: false }),
+  videoDuration: null,
+  setVideoDuration: (d) => {
+    const prev = useSubtitleStore.getState().videoDuration;
+    set({ videoDuration: d });
+    if (d !== null && d !== prev) {
+      const { subs, changed } = clampToDuration(useSubtitleStore.getState().subtitles, d);
+      set({ subtitles: subs, ...(changed ? { isDirty: true } : {}) });
+    }
+  },
 }));
