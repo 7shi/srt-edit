@@ -11,7 +11,11 @@ interface SubtitleState {
   removeSubtitle: (id: string) => void;
   updateSubtitle: (id: string, updates: Partial<Pick<Subtitle, 'startTime' | 'endTime' | 'text'>>) => void;
   setActive: (id: string | null) => void;
+  selectAndSeek: (id: string) => void;
   reorderSubtitles: () => void;
+  splitAtTime: (currentTime: number) => void;
+  seekTarget: number | null;
+  consumeSeekTarget: () => number | null;
 }
 
 export const useSubtitleStore = create<SubtitleState>((set, get) => ({
@@ -72,6 +76,11 @@ export const useSubtitleStore = create<SubtitleState>((set, get) => ({
 
   setActive: (id) => set({ activeId: id }),
 
+  selectAndSeek: (id) => {
+    const sub = get().subtitles.find((s) => s.id === id);
+    if (sub) set({ activeId: id, seekTarget: sub.startTime });
+  },
+
   reorderSubtitles: () => {
     set({
       subtitles: get()
@@ -79,5 +88,30 @@ export const useSubtitleStore = create<SubtitleState>((set, get) => ({
         .sort((a, b) => a.startTime - b.startTime)
         .map((s, i) => ({ ...s, index: i + 1 })),
     });
+  },
+
+  splitAtTime: (currentTime: number) => {
+    const { subtitles } = get();
+    const sorted = [...subtitles].sort((a, b) => a.startTime - b.startTime);
+    const currentIdx = sorted.findIndex(
+      (s) => currentTime >= s.startTime && currentTime <= s.endTime,
+    );
+    if (currentIdx === -1) return;
+
+    const updated = sorted.map((s, i) => {
+      if (i === currentIdx) return { ...s, endTime: currentTime };
+      if (i === currentIdx + 1) return { ...s, startTime: currentTime };
+      return s;
+    }).map((s, i) => ({ ...s, index: i + 1 }));
+
+    set({ subtitles: updated });
+  },
+
+  seekTarget: null,
+
+  consumeSeekTarget: () => {
+    const { seekTarget } = get();
+    set({ seekTarget: null });
+    return seekTarget;
   },
 }));

@@ -9,6 +9,10 @@ export function VideoPlayer() {
   const [isPlaying, setIsPlaying] = useState(false);
   const subtitles = useSubtitleStore((s) => s.subtitles);
   const setActive = useSubtitleStore((s) => s.setActive);
+  const selectAndSeek = useSubtitleStore((s) => s.selectAndSeek);
+  const splitAtTime = useSubtitleStore((s) => s.splitAtTime);
+  const seekTarget = useSubtitleStore((s) => s.seekTarget);
+  const consumeSeekTarget = useSubtitleStore((s) => s.consumeSeekTarget);
 
   const handleFileChange = useCallback(
     (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -59,8 +63,19 @@ export function VideoPlayer() {
   };
 
   const activeSub = subtitles.find(
-    (s) => currentTime >= s.startTime && currentTime <= s.endTime,
+    (s) => currentTime >= s.startTime && currentTime < s.endTime,
   );
+
+  useEffect(() => {
+    if (activeSub) setActive(activeSub.id);
+  }, [activeSub?.id]);
+
+  useEffect(() => {
+    if (seekTarget !== null) {
+      const time = consumeSeekTarget();
+      if (time !== null) seek(time);
+    }
+  }, [seekTarget]);
 
   const formatTime = (t: number) => {
     const m = Math.floor(t / 60);
@@ -106,7 +121,10 @@ export function VideoPlayer() {
         {videoSrc && activeSub && (
           <div
             className="absolute bottom-8 left-1/2 -translate-x-1/2 bg-black/80 text-white px-4 py-2 rounded text-center max-w-[80%] whitespace-pre-line cursor-pointer"
-            onClick={() => activeSub && setActive(activeSub.id)}
+            onClick={(e) => {
+              e.stopPropagation();
+              if (activeSub) selectAndSeek(activeSub.id);
+            }}
           >
             {activeSub.text}
           </div>
@@ -138,6 +156,13 @@ export function VideoPlayer() {
                 className="px-3 py-1 rounded bg-blue-500 text-white hover:bg-blue-600"
               >
                 {isPlaying ? 'Pause' : 'Play'}
+              </button>
+              <button
+                onClick={() => splitAtTime(currentTime)}
+                disabled={!isPlaying || !activeSub}
+                className="px-3 py-1 rounded bg-orange-500 text-white hover:bg-orange-600 disabled:opacity-40 disabled:cursor-not-allowed"
+              >
+                Split
               </button>
               <button
                 onClick={stepForward}

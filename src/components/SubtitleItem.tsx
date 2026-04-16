@@ -11,7 +11,7 @@ export function SubtitleItem({
   const activeId = useSubtitleStore((s) => s.activeId);
   const updateSubtitle = useSubtitleStore((s) => s.updateSubtitle);
   const removeSubtitle = useSubtitleStore((s) => s.removeSubtitle);
-  const setActive = useSubtitleStore((s) => s.setActive);
+  const setActive = useSubtitleStore((s) => s.selectAndSeek);
 
   if (!subtitle) return null;
 
